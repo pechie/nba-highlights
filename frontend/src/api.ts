@@ -2,14 +2,22 @@ export interface Game {
   game_id: string
   home_team: string
   away_team: string
-  label: string
+  home_team_id: number
+  away_team_id: number
+  home_pts: number
+  away_pts: number
+  home_record: string
+  away_record: string
   status: string
+  winner: string
+  label: string
 }
 
 export interface Player {
   player_id: number
   name: string
   team: string
+  jersey: string
 }
 
 export interface StatType {
@@ -37,12 +45,13 @@ export async function fetchStatTypes(gameId: string, playerId: number): Promise<
 export async function compileHighlights(
   gameId: string,
   playerId: number,
-  statTypes: string[]
+  statTypes: string[],
+  quality: string
 ): Promise<string> {
   const res = await checkOk(await fetch('/api/highlights/compile', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ game_id: gameId, player_id: playerId, stat_types: statTypes }),
+    body: JSON.stringify({ game_id: gameId, player_id: playerId, stat_types: statTypes, quality }),
   }))
   return URL.createObjectURL(await res.blob())
 }

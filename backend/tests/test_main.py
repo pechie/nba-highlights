@@ -13,7 +13,9 @@ client = TestClient(app)
 def test_get_games(mock_fn):
     mock_fn.return_value = [
         {"game_id": "0022501054", "home_team": "OKC", "away_team": "BOS",
-         "label": "OKC vs BOS", "status": "Final"}
+         "home_team_id": 1610612760, "away_team_id": 1610612738,
+         "home_pts": 110, "away_pts": 105, "home_record": "55-16", "away_record": "42-29",
+         "status": "Final", "winner": "OKC", "label": "OKC vs BOS"}
     ]
     r = client.get("/games?date=2025-03-01")
     assert r.status_code == 200

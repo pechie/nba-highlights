@@ -1,6 +1,8 @@
+from datetime import datetime
 from nba_api.stats.endpoints import (
-    leaguegamefinder,
+    scoreboardv3,
     boxscoretraditionalv3,
+    commonteamroster,
     playbyplayv3,
     videoeventsasset,
 )
@@ -16,44 +18,69 @@ _HEADERS = {
     "Connection": "keep-alive",
     "Referer": "https://www.nba.com/",
     "Origin": "https://www.nba.com",
+    "Cache-Control": "no-cache",
+    "Pragma": "no-cache",
+    "Sec-Fetch-Site": "same-site",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Dest": "empty",
 }
 
 
 def get_games(date: str) -> list[dict]:
-    gf = leaguegamefinder.LeagueGameFinder(
-        date_from_nullable=date,
-        date_to_nullable=date,
-        league_id_nullable="00",
-        headers=_HEADERS,
-    )
-    df = gf.league_game_finder_results.get_data_frame()
-    seen: set[str] = set()
+    game_date = datetime.strptime(date, "%Y-%m-%d").strftime("%m/%d/%Y")
+    sb = scoreboardv3.ScoreboardV3(game_date=game_date, league_id="00", headers=_HEADERS)
+    games_data = sb.get_dict()["scoreboard"]["games"]
     results = []
-    for _, row in df.iterrows():
-        gid = row["GAME_ID"]
-        if gid in seen:
-            continue
-        seen.add(gid)
-        matchup = row["MATCHUP"]
-        if "vs." in matchup:
-            home_team, away_team = matchup.split(" vs. ")
-        else:
-            away_team, home_team = matchup.split(" @ ")
+    for g in games_data:
+        home = g["homeTeam"]
+        away = g["awayTeam"]
+        home_pts = home["score"] or 0
+        away_pts = away["score"] or 0
+        winner = (
+            home["teamTricode"] if home_pts > away_pts
+            else away["teamTricode"] if away_pts > home_pts
+            else ""
+        )
         results.append({
-            "game_id": gid,
-            "home_team": home_team.strip(),
-            "away_team": away_team.strip(),
-            "label": f"{home_team.strip()} vs {away_team.strip()}",
-            "status": row["WL"] or "",
+            "game_id": g["gameId"],
+            "home_team": home["teamTricode"],
+            "away_team": away["teamTricode"],
+            "home_team_id": home["teamId"],
+            "away_team_id": away["teamId"],
+            "home_pts": home_pts,
+            "away_pts": away_pts,
+            "home_record": f"{home['wins']}-{home['losses']}",
+            "away_record": f"{away['wins']}-{away['losses']}",
+            "status": g["gameStatusText"].strip(),
+            "winner": winner,
+            "label": f"{home['teamTricode']} vs {away['teamTricode']}",
         })
     return results
+
+
+def _season_from_game_id(game_id: str) -> str:
+    year = int(game_id[3:5])
+    return f"20{year:02d}-{(year + 1):02d}"
 
 
 def get_players(game_id: str) -> list[dict]:
     box = boxscoretraditionalv3.BoxScoreTraditionalV3(game_id=game_id, headers=_HEADERS)
     df = box.player_stats.get_data_frame()
+
+    season = _season_from_game_id(game_id)
+    jersey_map: dict[int, str] = {}
+    for team_id in df["teamId"].unique():
+        roster = commonteamroster.CommonTeamRoster(team_id=str(int(team_id)), season=season, headers=_HEADERS)
+        for _, row in roster.common_team_roster.get_data_frame().iterrows():
+            jersey_map[int(row["PLAYER_ID"])] = str(row["NUM"])
+
     return [
-        {"player_id": int(row["personId"]), "name": f"{row['firstName']} {row['familyName']}", "team": row["teamTricode"]}
+        {
+            "player_id": int(row["personId"]),
+            "name": f"{row['firstName']} {row['familyName']}",
+            "team": row["teamTricode"],
+            "jersey": jersey_map.get(int(row["personId"]), ""),
+        }
         for _, row in df.iterrows()
     ]
 
@@ -142,10 +169,15 @@ def get_play_event_nums(game_id: str, player_id: int, stat_types: list[str]) -> 
     return sorted(event_nums)
 
 
-def get_video_url(game_id: str, event_num: int) -> str | None:
+def get_video_url(game_id: str, event_num: int, quality: str = "high") -> str | None:
     ve = videoeventsasset.VideoEventsAsset(game_id=game_id, game_event_id=event_num, headers=_HEADERS, timeout=15)
     data = ve.get_dict()
     urls = data.get("resultSets", {}).get("Meta", {}).get("videoUrls", [])
     if not urls:
         return None
-    return urls[0].get("murl") or urls[0].get("lurl") or urls[0].get("surl")
+    url = urls[0]
+    if quality == "low":
+        return url.get("surl") or url.get("murl") or url.get("lurl")
+    if quality == "medium":
+        return url.get("murl") or url.get("lurl") or url.get("surl")
+    return url.get("lurl") or url.get("murl") or url.get("surl")

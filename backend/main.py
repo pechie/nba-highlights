@@ -41,6 +41,7 @@ class CompileRequest(BaseModel):
     game_id: str
     player_id: int
     stat_types: list[str]
+    quality: str = "high"
 
 
 @app.post("/highlights/compile")
@@ -54,7 +55,7 @@ def compile_endpoint(req: CompileRequest):
         print(f"[compile] {len(event_nums)} events: {event_nums}")
         for i, event_num in enumerate(event_nums):
             try:
-                url = get_video_url(req.game_id, event_num)
+                url = get_video_url(req.game_id, event_num, req.quality)
                 print(f"[compile] event {event_num} -> url: {url!r}")
                 if not url:
                     continue
