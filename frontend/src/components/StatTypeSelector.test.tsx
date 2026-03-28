@@ -9,18 +9,30 @@ const statTypes: StatType[] = [
 ]
 
 describe('StatTypeSelector', () => {
-  it('renders checkboxes for each stat type', () => {
+  it('renders stat types and quality options', () => {
     render(<StatTypeSelector statTypes={statTypes} onConfirm={vi.fn()} />)
-    expect(screen.getByLabelText('Made Field Goals')).toBeDefined()
-    expect(screen.getByLabelText('Assists')).toBeDefined()
+    expect(screen.getByText('Made Field Goals')).toBeDefined()
+    expect(screen.getByText('Assists')).toBeDefined()
+    expect(screen.getByRole('button', { name: 'Low' })).toBeDefined()
+    expect(screen.getByRole('button', { name: 'Medium' })).toBeDefined()
+    expect(screen.getByRole('button', { name: 'High' })).toBeDefined()
   })
 
-  it('calls onConfirm with selected stat ids', () => {
+  it('calls onConfirm with selected stat ids and default quality', () => {
     const onConfirm = vi.fn()
     render(<StatTypeSelector statTypes={statTypes} onConfirm={onConfirm} />)
-    fireEvent.click(screen.getByLabelText('Made Field Goals'))
+    fireEvent.click(screen.getByText('Made Field Goals'))
     fireEvent.click(screen.getByRole('button', { name: /generate/i }))
-    expect(onConfirm).toHaveBeenCalledWith(['FGM'])
+    expect(onConfirm).toHaveBeenCalledWith(['FGM'], 'high')
+  })
+
+  it('calls onConfirm with selected quality', () => {
+    const onConfirm = vi.fn()
+    render(<StatTypeSelector statTypes={statTypes} onConfirm={onConfirm} />)
+    fireEvent.click(screen.getByText('Made Field Goals'))
+    fireEvent.click(screen.getByRole('button', { name: 'Low' }))
+    fireEvent.click(screen.getByRole('button', { name: /generate/i }))
+    expect(onConfirm).toHaveBeenCalledWith(['FGM'], 'low')
   })
 
   it('does not call onConfirm when nothing selected', () => {

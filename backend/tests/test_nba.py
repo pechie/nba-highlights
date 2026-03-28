@@ -5,17 +5,19 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 from nba import get_games, get_players, get_available_stat_types, get_play_event_nums, get_video_url
 
-def _game_finder_df():
-    return pd.DataFrame([
-        {"GAME_ID": "0022501054", "MATCHUP": "OKC vs. BOS", "WL": "W"},
-        {"GAME_ID": "0022501054", "MATCHUP": "BOS @ OKC", "WL": "L"},
-    ])
+def _scoreboard_dict():
+    return {"scoreboard": {"games": [{
+        "gameId": "0022501054",
+        "gameStatusText": "Final",
+        "homeTeam": {"teamId": 1610612760, "teamTricode": "OKC", "wins": 55, "losses": 16, "score": 110},
+        "awayTeam": {"teamId": 1610612738, "teamTricode": "BOS", "wins": 42, "losses": 29, "score": 105},
+    }]}}
 
-@patch("nba.leaguegamefinder.LeagueGameFinder")
+@patch("nba.scoreboardv3.ScoreboardV3")
 def test_get_games_returns_list(mock_cls):
-    mock_gf = MagicMock()
-    mock_gf.league_game_finder_results.get_data_frame.return_value = _game_finder_df()
-    mock_cls.return_value = mock_gf
+    mock_sb = MagicMock()
+    mock_sb.get_dict.return_value = _scoreboard_dict()
+    mock_cls.return_value = mock_sb
 
     result = get_games("2025-03-01")
 
@@ -23,21 +25,36 @@ def test_get_games_returns_list(mock_cls):
     assert result[0]["game_id"] == "0022501054"
     assert result[0]["home_team"] == "OKC"
     assert result[0]["away_team"] == "BOS"
+    assert result[0]["home_pts"] == 110
+    assert result[0]["away_pts"] == 105
+    assert result[0]["home_record"] == "55-16"
+    assert result[0]["away_record"] == "42-29"
+    assert result[0]["status"] == "Final"
+    assert result[0]["winner"] == "OKC"
     assert result[0]["label"] == "OKC vs BOS"
-    assert mock_cls.call_args.kwargs["date_from_nullable"] == "2025-03-01"
+    assert mock_cls.call_args.kwargs["game_date"] == "03/01/2025"
 
+@patch("nba.commonteamroster.CommonTeamRoster")
 @patch("nba.boxscoretraditionalv3.BoxScoreTraditionalV3")
-def test_get_players_returns_list(mock_cls):
+def test_get_players_returns_list(mock_box_cls, mock_roster_cls):
     mock_box = MagicMock()
     mock_box.player_stats.get_data_frame.return_value = pd.DataFrame([
-        {"personId": 1629029, "firstName": "Shai", "familyName": "Gilgeous-Alexander", "teamTricode": "OKC"},
-        {"personId": 1628384, "firstName": "Jayson", "familyName": "Tatum", "teamTricode": "BOS"},
+        {"personId": 1629029, "firstName": "Shai", "familyName": "Gilgeous-Alexander", "teamTricode": "OKC", "teamId": 1610612760},
+        {"personId": 1628384, "firstName": "Jayson", "familyName": "Tatum", "teamTricode": "BOS", "teamId": 1610612738},
     ])
-    mock_cls.return_value = mock_box
+    mock_box_cls.return_value = mock_box
+
+    mock_roster = MagicMock()
+    mock_roster.common_team_roster.get_data_frame.return_value = pd.DataFrame([
+        {"PLAYER_ID": 1629029, "NUM": "2"},
+        {"PLAYER_ID": 1628384, "NUM": "0"},
+    ])
+    mock_roster_cls.return_value = mock_roster
 
     result = get_players("0022501054")
 
-    assert result[0] == {"player_id": 1629029, "name": "Shai Gilgeous-Alexander", "team": "OKC"}
+    assert result[0] == {"player_id": 1629029, "name": "Shai Gilgeous-Alexander", "team": "OKC", "jersey": "2"}
+    assert result[1] == {"player_id": 1628384, "name": "Jayson Tatum", "team": "BOS", "jersey": "0"}
     assert mock_cls.call_args.kwargs["game_id"] == "0022501054"
 
 @patch("nba.boxscoretraditionalv3.BoxScoreTraditionalV3")
@@ -94,7 +111,7 @@ def test_get_video_url_returns_lurl(mock_cls):
 
     url = get_video_url("0022501054", 10)
 
-    assert url == "https://videos.nba.com/clip_medium.mp4"
+    assert url == "https://videos.nba.com/clip_large.mp4"
     assert mock_cls.call_args.kwargs["game_id"] == "0022501054"
     assert mock_cls.call_args.kwargs["game_event_id"] == 10
 
