@@ -26,6 +26,15 @@ npm install
 
 ## Running
 
+Start both servers with a single command:
+```bash
+./start.sh
+```
+
+Then open http://localhost:5173. Press Ctrl+C to stop both servers.
+
+Alternatively, run them separately:
+
 **Backend** (port 8000):
 ```bash
 cd backend && source .venv/bin/activate && uvicorn main:app --reload
@@ -35,8 +44,6 @@ cd backend && source .venv/bin/activate && uvicorn main:app --reload
 ```bash
 cd frontend && npm run dev
 ```
-
-Then open http://localhost:5173.
 
 ## Running Tests
 
