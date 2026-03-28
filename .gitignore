@@ -12,4 +12,14 @@ frontend/dist/
 
 # Misc
 .idea/
+.vscode/
 .DS_Store
+
+# Environment variables
+.env
+.env.local
+
+# Test coverage
+.coverage
+htmlcov/
+frontend/coverage/
