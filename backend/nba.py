@@ -6,6 +6,7 @@ from nba_api.stats.endpoints import (
     playbyplayv3,
     videoeventsasset,
 )
+from cache import cached
 
 _HEADERS = {
     "Host": "stats.nba.com",
@@ -26,6 +27,7 @@ _HEADERS = {
 }
 
 
+@cached(ttl=3600)  # 1 hour
 def get_games(date: str) -> list[dict]:
     game_date = datetime.strptime(date, "%Y-%m-%d").strftime("%m/%d/%Y")
     sb = scoreboardv3.ScoreboardV3(game_date=game_date, league_id="00", headers=_HEADERS)
@@ -63,6 +65,7 @@ def _season_from_game_id(game_id: str) -> str:
     return f"20{year:02d}-{(year + 1):02d}"
 
 
+@cached(ttl=3600)  # 1 hour
 def get_players(game_id: str) -> list[dict]:
     box = boxscoretraditionalv3.BoxScoreTraditionalV3(game_id=game_id, headers=_HEADERS)
     df = box.player_stats.get_data_frame()
@@ -107,6 +110,7 @@ _STAT_COL = {
     "TOV": "turnovers",
 }
 
+@cached(ttl=3600)  # 1 hour
 def get_available_stat_types(game_id: str, player_id: int) -> list[dict]:
     box = boxscoretraditionalv3.BoxScoreTraditionalV3(game_id=game_id, headers=_HEADERS)
     df = box.player_stats.get_data_frame()
@@ -146,6 +150,7 @@ def _matches_stat(row: dict, player_id: int, stat: str, family_name: str | None)
     return False
 
 
+@cached(ttl=3600)  # 1 hour
 def get_play_event_nums(game_id: str, player_id: int, stat_types: list[str]) -> list[int]:
     pbp = playbyplayv3.PlayByPlayV3(game_id=game_id, headers=_HEADERS)
     df = pbp.play_by_play.get_data_frame()
@@ -169,6 +174,7 @@ def get_play_event_nums(game_id: str, player_id: int, stat_types: list[str]) -> 
     return sorted(event_nums)
 
 
+@cached(ttl=3600)  # 1 hour
 def get_video_url(game_id: str, event_num: int, quality: str = "high") -> str | None:
     ve = videoeventsasset.VideoEventsAsset(game_id=game_id, game_event_id=event_num, headers=_HEADERS, timeout=15)
     data = ve.get_dict()

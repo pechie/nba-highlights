@@ -2,7 +2,7 @@ import type { Game } from '../api'
 
 interface Props { games: Game[]; onSelect: (game: Game) => void }
 
-function TeamInfo({ tricode, teamId, record, align }: { tricode: string; teamId: number; record: string; align: 'left' | 'right' }) {
+function TeamInfo({ tricode, teamId, record }: { tricode: string; teamId: number; record: string }) {
   return (
     <div className={`flex flex-col items-center gap-1 w-24 flex-shrink-0`}>
       <img
@@ -31,7 +31,7 @@ export default function GameSelector({ games, onSelect }: Props) {
               onClick={() => onSelect(game)}
               className="flex items-center gap-4 px-5 py-4 bg-white hover:bg-[#F5F5F7] transition-colors"
             >
-              <TeamInfo tricode={game.home_team} teamId={game.home_team_id} record={game.home_record} align="left" />
+              <TeamInfo tricode={game.home_team} teamId={game.home_team_id} record={game.home_record}  />
               <div className="flex-1 flex items-center justify-center gap-3">
                 <span className={`text-3xl tabular-nums ${homeWon ? 'font-bold text-[#1D1D1F]' : isOver ? 'font-light text-[#6E6E73]' : 'font-semibold text-[#1D1D1F]'}`}>
                   {game.home_pts}
@@ -45,7 +45,7 @@ export default function GameSelector({ games, onSelect }: Props) {
                   {game.away_pts}
                 </span>
               </div>
-              <TeamInfo tricode={game.away_team} teamId={game.away_team_id} record={game.away_record} align="right" />
+              <TeamInfo tricode={game.away_team} teamId={game.away_team_id} record={game.away_record}  />
             </button>
           )
         })}

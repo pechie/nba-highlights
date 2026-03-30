@@ -38,11 +38,11 @@ describe('compileHighlights', () => {
     const blob = new Blob([new Uint8Array([0])], { type: 'video/mp4' })
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({ ok: true, blob: async () => blob } as Response)
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:fake')
-    const result = await compileHighlights('0022501054', 1629029, ['FGM'])
+    const result = await compileHighlights('0022501054', 1629029, ['FGM'], 'high')
     expect(fetch).toHaveBeenCalledWith('/api/highlights/compile', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ game_id: '0022501054', player_id: 1629029, stat_types: ['FGM'] }),
+      body: JSON.stringify({ game_id: '0022501054', player_id: 1629029, stat_types: ['FGM'], quality: 'high' }),
     })
     expect(result).toBe('blob:fake')
   })
